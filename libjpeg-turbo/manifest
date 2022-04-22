@@ -1,0 +1,20 @@
+: 1
+name: libjpeg-turbo
+
+# Note: see also libver_{major,minor} in buildfile.
+#
+version: 2.1.3-a.0.z
+
+summary: JPEG image codec C library
+license: IJG, LicenseRef-modified-BSD-3-clause, Zlib ; IJG: Independent JPEG Group license.
+description-file: README.md
+changes-file: ChangeLog.md
+changes-file: change.log ; Changes merged from IJG libjpeg.
+url: https://libjpeg-turbo.org/
+src-url: https://github.com/libjpeg-turbo/libjpeg-turbo
+package-url: https://github.com/build2-packaging/libjpeg-turbo
+package-email: packaging@build2.org ; Mailing list.
+email: libjpeg-turbo-users@googlegroups.com ; Mailing list.
+build-error-email: builds@build2.org
+depends: * build2 >= 0.15.0-
+depends: * bpkg >= 0.15.0-
