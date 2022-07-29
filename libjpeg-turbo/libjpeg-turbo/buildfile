@@ -119,16 +119,8 @@ libver_minor = 2
 # The Windows jconfig.h.in has a couple of typedefs at the end that the other
 # one does not.
 #
-if $windows
-{
-  h{jconfig}: win/in{jconfig}
-  h{jconfig}: in{jconfig}: include = false
-}
-else
-{
-  h{jconfig}: in{jconfig}
-  h{jconfig}: win/in{jconfig}: include = false
-}
+h{jconfig}: win/in{jconfig}: include = $windows
+h{jconfig}: in{jconfig}:     include = (!$windows)
 
 h{jconfig}:
 {
