@@ -182,9 +182,9 @@ re1 = '^\s*project\((.+) .+\)'
 re2 = '^\s*set\(COPYRIGHT_YEAR\s+"(.+)"\)'
 re3 = '^\s*set\(MEM_SRCDST_FUNCTIONS\s+"(.+)"\)'
 lines = $process.run_regex(cat $src_base/CMakeLists.txt, "$re1|$re2|$re3")
-projname       = $regex.merge($lines, $re1, '\1', format_first_only, format_no_copy)
-copyright      = $regex.merge($lines, $re2, '\1', format_first_only, format_no_copy)
-exported_funcs = $regex.merge($lines, $re3, '\1', format_first_only, format_no_copy)
+projname       = $regex.merge($lines, $re1, '\1', '', format_first_only format_no_copy)
+copyright      = $regex.merge($lines, $re2, '\1', '', format_first_only format_no_copy)
+exported_funcs = $regex.merge($lines, $re3, '\1', '', format_first_only format_no_copy)
 
 # Internal library configuration header.
 #
