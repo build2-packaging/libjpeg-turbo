@@ -420,6 +420,15 @@ if $msvc
 elif ($linux || $bsd)
   c.loptions += "-Wl,--version-script=$out_base/src/libjpeg.map"
 
+# Silence the harmless warnings that upstream code triggers with extra
+# warnings enabled (-Wextra, -W4): unused parameters of the module method
+# implementations and a signedness change in src/jdphuff.c.
+#
+if $msvc
+  c.coptions += -wd4100
+else
+  c.coptions += -Wno-unused-parameter -Wno-sign-compare
+
 # Export options.
 #
 lib{jpeg}: c.export.poptions = "-I$out_base/src" "-I$src_base/src"
