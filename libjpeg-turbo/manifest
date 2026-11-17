@@ -3,7 +3,7 @@ name: libjpeg-turbo
 
 # Note: see also jpeg_lib_version in buildfile.
 #
-version: 3.2.1-a.0.z
+version: 3.2.1
 
 language: c
 summary: JPEG image codec C library
