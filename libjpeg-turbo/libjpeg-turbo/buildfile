@@ -10,6 +10,16 @@ msvc    = ($c.class == 'msvc')
 #
 win64 = ($windows && $regex.match($c.target.cpu, 'x86_64|aarch64'))
 
+# The emulated libjpeg API/ABI version (note: not the package or upstream
+# project version), as upstream's JPEG_LIB_VERSION in CMakeLists.txt: 62 for
+# libjpeg v6b (the default) or 70/80 for v7/v8 (see build/root.build).
+#
+jpeg_lib_version = 62
+if $config.libjpeg_turbo.jpeg7
+  jpeg_lib_version = 70
+if $config.libjpeg_turbo.jpeg8
+  jpeg_lib_version = 80
+
 # Sources that are included by other sources instead of being compiled
 # (mostly the data precision-dependent ones, see below).
 #
@@ -72,7 +82,12 @@ define vsc: file
 vsc{*}: extension = map
 libs{jpeg}: src/vsc{libjpeg}: include = ($linux || $bsd ? adhoc : false)
 
-lib{jpeg}: win/def{jpeg62}: include = $windows
+# As upstream, the module definition file is win/jpeg<N>.def where <N> is
+# the shared library major version (SO_MAJOR_VERSION): 62, 7, or 8.
+#
+lib{jpeg}: win/def{jpeg62}: include = ($windows && $jpeg_lib_version == 62)
+lib{jpeg}: win/def{jpeg7}:  include = ($windows && $jpeg_lib_version == 70)
+lib{jpeg}: win/def{jpeg8}:  include = ($windows && $jpeg_lib_version == 80)
 
 # Generated headers.
 #
@@ -95,14 +110,6 @@ for i : 0 1
     vm = "0$vm"
 }
 ver_num = "$version.major$vm$vp"
-
-# The emulated libjpeg API/ABI version (note: not the package or upstream
-# project version). This is upstream's JPEG_LIB_VERSION in CMakeLists.txt,
-# which is 62 (libjpeg v6b) by default and 70 or 80 with WITH_JPEG7 or
-# WITH_JPEG8. We emulate v6b (see README-DEV), which is also why the module
-# definition file is win/jpeg62.def.
-#
-jpeg_lib_version = 62
 
 src/h{jconfig}: src/in{jconfig}
 {
@@ -225,9 +232,10 @@ src/vsc{libjpeg}: src/in{libjpeg}
   #
   JPEG_LIB_VERSION_DECIMAL = $regex.replace($jpeg_lib_version, '(\d)(\d)', '\1.\2')
 
-  # Functions exported by name.
+  # Functions exported by name. As upstream, not when emulating v8, whose API
+  # already includes them.
   #
-  MEM_SRCDST_FUNCTIONS = $exported_funcs
+  MEM_SRCDST_FUNCTIONS = ($jpeg_lib_version != 80 ? $exported_funcs : '')
 }
 
 # Build options.

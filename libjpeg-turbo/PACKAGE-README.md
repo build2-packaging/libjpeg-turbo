@@ -5,7 +5,7 @@ This is a `build2` package for the
 It provides a JPEG image codec that uses SIMD instructions to accelerate
 baseline and progressive JPEG compression and decompression on systems with
 common CPU architectures. It implements the traditional libjpeg API (emulating
-the libjpeg v6b API/ABI) and features colorspace extensions that allow it to
+the libjpeg v6b API/ABI by default) and features colorspace extensions that allow it to
 compress from/decompress to 32-bit and big-endian pixel buffers (RGBX, XBGR,
 etc). Note that this package does not provide the TurboJPEG API.
 
@@ -41,4 +41,16 @@ The libjpeg API library. Its public headers are included as `<jpeglib.h>`
 
 ## Configuration variables
 
-This package provides no configuration variables.
+This package provides the following configuration variables:
+
+```
+[bool] config.libjpeg_turbo.jpeg7 ?= false
+[bool] config.libjpeg_turbo.jpeg8 ?= false
+```
+
+By default the library emulates the libjpeg v6b API/ABI. The `jpeg7` and
+`jpeg8` variables make it emulate the libjpeg v7 or v8 API/ABI instead (if
+both are true, then the latest is emulated). Note that either makes the
+library backward-incompatible with libjpeg v6b. See the upstream
+[README](https://github.com/libjpeg-turbo/libjpeg-turbo#libjpeg-v7-and-v8-apiabi-emulation)
+for details.
