@@ -1,0 +1,44 @@
+# libjpeg-turbo - JPEG image codec C library
+
+This is a `build2` package for the
+[`libjpeg-turbo`](https://github.com/libjpeg-turbo/libjpeg-turbo) C library.
+It provides a JPEG image codec that uses SIMD instructions to accelerate
+baseline and progressive JPEG compression and decompression on systems with
+common CPU architectures. It implements the traditional libjpeg API (emulating
+the libjpeg v6b API/ABI) and features colorspace extensions that allow it to
+compress from/decompress to 32-bit and big-endian pixel buffers (RGBX, XBGR,
+etc). Note that this package does not provide the TurboJPEG API.
+
+
+## Usage
+
+To start using `libjpeg-turbo` in your project, add the following `depends`
+value to your `manifest`, adjusting the version constraint as appropriate:
+
+```
+depends: libjpeg-turbo ^3.2.1
+```
+
+Then import the library in your `buildfile`:
+
+```
+import libs = libjpeg-turbo%lib{jpeg}
+```
+
+
+## Importable targets
+
+This package provides the following importable targets:
+
+```
+lib{jpeg}
+```
+
+The libjpeg API library. Its public headers are included as `<jpeglib.h>`
+(which requires `<stdio.h>` to be included first), `<jerror.h>`,
+`<jmorecfg.h>`, and `<jconfig.h>`.
+
+
+## Configuration variables
+
+This package provides no configuration variables.
