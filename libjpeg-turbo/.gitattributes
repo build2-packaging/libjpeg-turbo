@@ -1,1 +1,5 @@
+libjpeg-turbo/simd/arm symlink=dir
+libjpeg-turbo/simd/i386 symlink=dir
+libjpeg-turbo/simd/nasm symlink=dir
+libjpeg-turbo/simd/x86_64 symlink=dir
 libjpeg-turbo/src/wrapper symlink=dir
