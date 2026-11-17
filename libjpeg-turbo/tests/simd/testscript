@@ -1,0 +1,11 @@
+: simd-scalar
+:
+: Verify that the SIMD extensions produce the same results as the scalar code,
+: including with the instruction sets restricted (see simd/README.md). The
+: restrictions that are not applicable to the CPU are ignored.
+:
+env JSIMD_FORCENONE=1 -- $* $src_base/testorig.jpg >=scalar;
+$* $src_base/testorig.jpg >>>scalar;
+env JSIMD_FORCESSE2=1 -- $* $src_base/testorig.jpg >>>scalar;
+env JSIMD_FORCESSE=1  -- $* $src_base/testorig.jpg >>>scalar;
+env JSIMD_FORCEMMX=1  -- $* $src_base/testorig.jpg >>>scalar

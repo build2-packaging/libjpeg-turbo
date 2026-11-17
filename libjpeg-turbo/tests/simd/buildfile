@@ -1,0 +1,12 @@
+import libs = libjpeg-turbo%lib{jpeg}
+
+define jpg: file
+jpg{*}: extension = jpg
+
+exe{driver}: {h c}{**} $libs testscript
+exe{driver}: jpg{testorig}: include = adhoc
+
+# Use the standard fopen() rather than the Microsoft-specific fopen_s().
+#
+if ($c.target.system == 'win32-msvc')
+  c.poptions += -D_CRT_SECURE_NO_WARNINGS
