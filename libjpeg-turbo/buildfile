@@ -1,5 +1,5 @@
 ./: {*/ -build/}                                                        \
-    doc{README.md PACKAGE-README.md libjpeg.txt example.txt             \
+    doc{README.md PACKAGE-README.md libjpeg.txt example.c               \
         ChangeLog.md change.log}                                        \
     legal{LICENSE.md README.ijg} manifest
 

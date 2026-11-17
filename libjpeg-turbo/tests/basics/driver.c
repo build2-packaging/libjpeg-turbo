@@ -1,4 +1,4 @@
-/* As per upstream/example.txt. Required for sizeof and FILE used in the
+/* As per upstream/src/example.c. Required for sizeof and FILE used in the
  * library headers.
  */
 #include <stdio.h>
