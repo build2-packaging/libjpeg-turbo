@@ -5,6 +5,11 @@
 config [bool] config.libjpeg_turbo.jpeg7 ?= false
 config [bool] config.libjpeg_turbo.jpeg8 ?= false
 
+# Build the SIMD extensions on the targets where this package supports them
+# (upstream's WITH_SIMD): x86-64 and i386 (which require NASM) and AArch64.
+#
+config [bool] config.libjpeg_turbo.simd ?= true
+
 # Uncomment to suppress warnings coming from external libraries.
 #
 #c.internal.scope = current

@@ -3,6 +3,7 @@
 
 linux   = ($c.target.class == 'linux')
 bsd     = ($c.target.class == 'bsd')
+macos   = ($c.target.class == 'macos')
 windows = ($c.target.class == 'windows')
 msvc    = ($c.class == 'msvc')
 
@@ -19,6 +20,25 @@ if $config.libjpeg_turbo.jpeg7
   jpeg_lib_version = 70
 if $config.libjpeg_turbo.jpeg8
   jpeg_lib_version = 80
+
+# The SIMD extensions to build, as upstream's SIMD_ARCHITECTURE (see
+# simd/CMakeLists.txt): NONE if disabled or not supported by this package on
+# the target CPU (see build/root.build).
+#
+simd_arch = NONE
+if $config.libjpeg_turbo.simd
+{
+  switch $c.target.cpu: regex.match
+  {
+    case 'x86_64'
+      simd_arch = X86_64
+    case 'i[3-6]86'
+      simd_arch = I386
+    case 'aarch64|arm64'
+      simd_arch = ARM64
+  }
+}
+simd = ($simd_arch != NONE)
 
 # Sources that are included by other sources instead of being compiled
 # (mostly the data precision-dependent ones, see below).
@@ -88,6 +108,151 @@ libs{jpeg}: src/vsc{libjpeg}: include = ($linux || $bsd ? adhoc : false)
 lib{jpeg}: win/def{jpeg62}: include = ($windows && $jpeg_lib_version == 62)
 lib{jpeg}: win/def{jpeg7}:  include = ($windows && $jpeg_lib_version == 70)
 lib{jpeg}: win/def{jpeg8}:  include = ($windows && $jpeg_lib_version == 80)
+
+# SIMD extensions.
+#
+# The SIMD dispatcher (simd/jsimd.c) selects the best extensions for the CPU
+# at run time.
+#
+lib{jpeg}: simd/c{jsimd} simd/h{* -neon-compat}: include = $simd
+
+# The x86-64 and i386 extensions are NASM sources (see SIMD_SOURCES in
+# simd/CMakeLists.txt).
+#
+nasm_simd = ($simd_arch == X86_64 || $simd_arch == I386)
+
+if $nasm_simd
+  import! nasm = nasm%exe{nasm}
+
+define asm: file
+asm{*}: extension = asm
+
+asm_x86_64 = jsimdcpu jfdctflt-sse                                          \
+             jccolor-sse2 jcgray-sse2 jchuff-sse2 jcphuff-sse2              \
+             jcsample-sse2 jdcolor-sse2 jdmerge-sse2 jdsample-sse2          \
+             jfdctfst-sse2 jfdctint-sse2 jidctflt-sse2 jidctfst-sse2        \
+             jidctint-sse2 jidctred-sse2 jquantf-sse2 jquanti-sse2          \
+             jccolor-avx2 jcgray-avx2 jcsample-avx2 jdcolor-avx2            \
+             jdmerge-avx2 jdsample-avx2 jfdctint-avx2 jidctint-avx2         \
+             jquanti-avx2
+
+asm_i386 = jsimdcpu jfdctflt-3dn jidctflt-3dn jquantf-3dn                   \
+           jccolor-mmx jcgray-mmx jcsample-mmx jdcolor-mmx jdmerge-mmx      \
+           jdsample-mmx jfdctfst-mmx jfdctint-mmx jidctfst-mmx jidctint-mmx \
+           jidctred-mmx jquanti-mmx                                         \
+           jfdctflt-sse jidctflt-sse jquantf-sse                            \
+           jccolor-sse2 jcgray-sse2 jchuff-sse2 jcphuff-sse2 jcsample-sse2  \
+           jdcolor-sse2 jdmerge-sse2 jdsample-sse2 jfdctfst-sse2            \
+           jfdctint-sse2 jidctflt-sse2 jidctfst-sse2 jidctint-sse2          \
+           jidctred-sse2 jquantf-sse2 jquanti-sse2                          \
+           jccolor-avx2 jcgray-avx2 jcsample-avx2 jdcolor-avx2              \
+           jdmerge-avx2 jdsample-avx2 jfdctint-avx2 jidctint-avx2           \
+           jquanti-avx2
+
+# The NASM options, as upstream's simd/CMakeLists.txt sets them. Position-
+# independent code (PIC) is always enabled outside Windows since upstream
+# uses the same objects for the shared and static libraries.
+#
+# Note that upstream only defines __CET__ if the C compiler enables Intel
+# CET. It is safe to always define it: it only adds ENDBR64 (a NOP on CPUs
+# without CET) and an ELF property note, which the linker drops unless all
+# the objects (including the C ones) have it.
+#
+nasm_options =
+switch $simd_arch
+{
+  case 'X86_64'
+  {
+    if $windows
+      nasm_options = -fwin64 -DWIN64
+    elif $macos
+      nasm_options = -fmacho64 -DMACHO -DPIC
+    elif ($c.target.system == 'linux-gnux32')
+      nasm_options = -felfx32 -DELF -DPIC -D__CET__
+    else
+      nasm_options = -felf64 -DELF -DPIC -D__CET__
+
+    nasm_options += -D__x86_64__ "-I$src_base/simd/x86_64/"
+  }
+  case 'I386'
+  {
+    if $windows
+      nasm_options = -fwin32 -DWIN32
+    elif $macos
+      nasm_options = -fmacho32 -DMACHO -DPIC
+    else
+      nasm_options = -felf32 -DELF -DPIC
+
+    nasm_options += "-I$src_base/simd/i386/"
+  }
+}
+nasm_options += "-I$src_base/simd/nasm/"
+
+# Assemble a NASM source into a static or shared object. The objects are
+# distinct (and so are the rules) to prevent the static and shared libraries
+# from clobbering each other's objects.
+#
+# The included files (simd/nasm/*.inc and the *ext-*.asm sources) are
+# extracted from the NASM dependency output.
+#
+obja{~'/(.+)\.asm\.a/'}: asm{~'/\1/'} $nasm
+{{
+  o = $path($>[0])
+  t = $(o).t
+  depdb dyndep --byproduct --what=include --default-type=file --file $t
+  diag nasm ($<[0]) -> ($>[0])
+  $nasm $nasm_options -MD $t -o $o $path($<[0])
+}}
+
+objs{~'/(.+)\.asm\.so/'}: asm{~'/\1/'} $nasm
+{{
+  o = $path($>[0])
+  t = $(o).t
+  depdb dyndep --byproduct --what=include --default-type=file --file $t
+  diag nasm ($<[0]) -> ($>[0])
+  $nasm $nasm_options -MD $t -o $o $path($<[0])
+}}
+
+for n: $asm_x86_64
+{
+  simd/x86_64/obja{$(n).asm.a.o}:  simd/x86_64/asm{$n} $nasm
+  simd/x86_64/objs{$(n).asm.so.o}: simd/x86_64/asm{$n} $nasm
+
+  liba{jpeg}: simd/x86_64/obja{$(n).asm.a.o}:  include = ($simd_arch == X86_64)
+  libs{jpeg}: simd/x86_64/objs{$(n).asm.so.o}: include = ($simd_arch == X86_64)
+}
+
+for n: $asm_i386
+{
+  simd/i386/obja{$(n).asm.a.o}:  simd/i386/asm{$n} $nasm
+  simd/i386/objs{$(n).asm.so.o}: simd/i386/asm{$n} $nasm
+
+  liba{jpeg}: simd/i386/obja{$(n).asm.a.o}:  include = ($simd_arch == I386)
+  libs{jpeg}: simd/i386/objs{$(n).asm.so.o}: include = ($simd_arch == I386)
+}
+
+# Ensure the included NASM sources are distributed.
+#
+lib{jpeg}: simd/x86_64/asm{*} simd/i386/asm{*} simd/nasm/file{*.inc}:       \
+  include = adhoc
+
+# The AArch64 extensions are Neon intrinsics. The included sources are
+# distributed but not compiled.
+#
+neon_arm64 = jccolor-neon jcgray-neon jcphuff-neon jcsample-neon            \
+             jdcolor-neon jdmerge-neon jdsample-neon jfdctfst-neon          \
+             jfdctint-neon jidctfst-neon jidctint-neon jidctred-neon        \
+             jquanti-neon
+
+lib{jpeg}: simd/arm/c{$neon_arm64} simd/arm/aarch64/c{jchuff-neon jsimdcpu} \
+           simd/arm/h{*} simd/h{neon-compat}: include = ($simd_arch == ARM64)
+
+lib{jpeg}: simd/arm/c{jcgryext-neon jdcolext-neon jdmrgext-neon}            \
+           simd/arm/aarch64/c{jccolext-neon}: include = adhoc
+
+# Don't install the private SIMD headers.
+#
+simd/h{*}: install = false
 
 # Generated headers.
 #
@@ -192,7 +357,7 @@ src/h{jconfigint}: src/in{jconfigint}
   #
   HAVE_INTRIN_H = $msvc
 
-  SIMD_ARCHITECTURE = NONE
+  SIMD_ARCHITECTURE = $simd_arch
   WITH_SIMDE = false
 
   WITH_PROFILE = false
@@ -220,7 +385,15 @@ src/h{jconfig} src/h{jconfigint}:
   C_ARITH_CODING_SUPPORTED = true
   D_ARITH_CODING_SUPPORTED = true
 
-  WITH_SIMD = false
+  WITH_SIMD = $simd
+}
+
+# The HAVE_VLD1_* Neon intrinsics checks are project checks (see
+# build/autoconf/checks/) since there are no builtin ones.
+#
+simd/h{neon-compat}: simd/arm/in{neon-compat}
+{
+  autoconf.flavor = cmake
 }
 
 # Linker version script.
@@ -240,7 +413,7 @@ src/vsc{libjpeg}: src/in{libjpeg}
 
 # Build options.
 #
-c.poptions =+ "-I$out_base/src" "-I$src_base/src"
+c.poptions =+ "-I$out_base/src" "-I$src_base/src" "-I$out_base/simd"
 
 if $msvc
   c.poptions += -D_CRT_NONSTDC_NO_WARNINGS
