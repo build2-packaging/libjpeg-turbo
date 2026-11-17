@@ -46,6 +46,7 @@ This package provides the following configuration variables:
 ```
 [bool] config.libjpeg_turbo.jpeg7 ?= false
 [bool] config.libjpeg_turbo.jpeg8 ?= false
+[bool] config.libjpeg_turbo.simd  ?= true
 ```
 
 By default the library emulates the libjpeg v6b API/ABI. The `jpeg7` and
@@ -54,3 +55,9 @@ both are true, then the latest is emulated). Note that either makes the
 library backward-incompatible with libjpeg v6b. See the upstream
 [README](https://github.com/libjpeg-turbo/libjpeg-turbo#libjpeg-v7-and-v8-apiabi-emulation)
 for details.
+
+The `simd` variable controls whether the SIMD extensions are built, which
+this package supports on `x86_64`, `i386`, and `aarch64` (on other targets
+the library is always built without them). On `x86_64` and `i386` they
+require the `nasm` assembler, which is then a build-time dependency of this
+package.
