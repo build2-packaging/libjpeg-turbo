@@ -6,7 +6,7 @@
 #include <jpeglib.h>
 
 int
-main ()
+main (void)
 {
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
